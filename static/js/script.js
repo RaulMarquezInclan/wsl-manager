@@ -15,14 +15,32 @@ $(document).ready(function() {
         $('#installBtn').prop('disabled', false);
     });
 
+    // Handle Delete Action
+    $('#deleteBtn').click(function() {
+        $('#deleteConfirmationModal').modal('show');
+        $('#confirmDeleteBtn').off('click').on('click', function() {
+            var selectedInstance = $('.instance-radio:checked').data('instance');
+            $.ajax({
+                url: '/delete',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ instances: [selectedInstance] }),
+                success: function(response) {
+                    $('#deleteConfirmationModal').modal('hide'); // Close the modal
+                    location.reload(); // Reload the page to refresh the list
+                }
+            });
+        });
+    });
+
     // Handle Clone Action
     $('#cloneBtn').click(function() {
         var selectedInstance = $('.instance-radio:checked').data('instance');
         $('#newInstanceName').val(selectedInstance); // Pre-populate the name
         $('#nameError').hide(); // Reset error message visibility
-        $('#confirmationModal').modal('show');
+        $('#cloneConfirmationModal').modal('show');
 
-        $('#confirmActionBtn').off('click').on('click', function() {
+        $('#confirmCloneBtn').off('click').on('click', function() {
             var newInstanceName = $('#newInstanceName').val().trim();
 
             if (newInstanceName === '') {
@@ -46,7 +64,7 @@ $(document).ready(function() {
                         }),
                         success: function(response) {
                             if (response.status === 'success') {
-                                $('#confirmationModal').modal('hide'); // Close the modal
+                                $('#cloneConfirmationModal').modal('hide'); // Close the modal
                                 location.reload(); // Reload the page to refresh the list
                             } else {
                                 $('#nameError').text('Cloning failed: ' + response.message).show();
@@ -56,24 +74,6 @@ $(document).ready(function() {
                             $('#nameError').text('An error occurred: ' + xhr.responseText).show();
                         }
                     });
-                }
-            });
-        });
-    });
-
-    // Handle Delete Action
-    $('#deleteBtn').click(function() {
-        $('#confirmationModal').modal('show');
-        $('#confirmActionBtn').off('click').on('click', function() {
-            var selectedInstance = $('.instance-radio:checked').data('instance');
-            $.ajax({
-                url: '/delete',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ instances: [selectedInstance] }),
-                success: function(response) {
-                    $('#confirmationModal').modal('hide'); // Close the modal
-                    location.reload(); // Reload the page to refresh the list
                 }
             });
         });
