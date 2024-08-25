@@ -30,7 +30,7 @@
                             {% for instance in instances %}
                             <li class="list-group-item" style="padding-top: 0px; padding-bottom: 0px;">
                                 <label style="width: 100%; cursor: pointer; padding-bottom: 4px; padding-top: 12px;">
-                                    <input type="checkbox" class="instance-checkbox" data-instance="{{ instance.name }}" style="margin-right: 8px;">
+                                    <input type="radio" name="instance" class="instance-radio" data-instance="{{ instance.name }}" style="margin-right: 8px;">
                                     {% if instance.state == 'Running' %}
                                         <i class="bi bi-circle-fill text-success"></i>
                                     {% else %}
@@ -71,16 +71,20 @@
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
+    <!-- Confirmation Modal for Clone -->
     <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
+                    <h5 class="modal-title" id="confirmationModalLabel">Clone Instance</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>                
+                </div>
                 <div class="modal-body">
-                    Are you sure you want to proceed with this action?
+                    <div class="form-group">
+                        <label for="newInstanceName">Enter the name for the cloned instance:</label>
+                        <input type="text" class="form-control" id="newInstanceName">
+                        <small id="nameError" class="text-danger" style="display:none;">An instance with this name already exists. Please choose a different name.</small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

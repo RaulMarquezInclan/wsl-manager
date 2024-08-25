@@ -1,6 +1,5 @@
 import subprocess
 import os
-import re
 
 BACKUP_DIR = 'C:\\WSL_Instances\\Backups\\'
 
@@ -9,8 +8,6 @@ def get_wsl_instances():
     decoded_output = result.stdout.encode('utf-8').decode('utf-16').replace('\x00', '')
     
     instances = []
-
-    print(decoded_output)
 
     for line in decoded_output.splitlines()[1:]:  # Skip the header line
         line = line.lstrip('*').strip()  # Remove the leading '*' if present and strip whitespace
@@ -22,20 +19,42 @@ def get_wsl_instances():
             name = parts[0].strip()
             state = parts[1].strip()
             instances.append({'name': name, 'state': state})
-    
-    print("Final list of instances:")
-    print(instances)
 
     return instances
 
 def delete_instance(instance_name):
     subprocess.run(['wsl', '--unregister', instance_name])
 
-def clone_instance(instance_name):
-    export_path = os.path.join(BACKUP_DIR, f'{instance_name}.tar')
-    subprocess.run(['wsl', '--export', instance_name, export_path])
-    new_instance_name = f'{instance_name}_clone'
-    subprocess.run(['wsl', '--import', new_instance_name, BACKUP_DIR, export_path])
+def clone_instance(original_instance, new_instance_name):
+    # Ensure the backup directory exists
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    
+    # Export the original WSL instance to a tar file
+    export_path = os.path.join(BACKUP_DIR, f'{original_instance}.tar')
+
+    # Check if the new instance name already exists
+    existing_instances_output = subprocess.run(['wsl', '--list'], capture_output=True, text=True).stdout.encode('utf-8').decode('utf-16').replace('\x00', '')
+    existing_instances = [line.strip().split(' ')[0] for line in existing_instances_output.splitlines() if line.strip()]
+
+    if new_instance_name in existing_instances:
+        raise Exception(f"An instance with the name '{new_instance_name}' already exists.")
+
+    # Specify a unique installation directory to avoid conflicts
+    install_dir = os.path.join(BACKUP_DIR, new_instance_name)
+
+    # Command to export and import in the same cmd window
+    combined_cmd = (
+        f'wsl --export {original_instance} {export_path} && '
+        f'wsl --import {new_instance_name} {install_dir} {export_path} --version 2'
+    )
+    
+    try:
+        # Run the command in a new command prompt window
+        subprocess.run(['cmd', '/c', 'start', 'cmd', '/k', combined_cmd], check=True)
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Failed to clone the WSL instance: {e.stderr}")
+    
+    print(f"Cloned {original_instance} to {new_instance_name} and installed it without running.")
 
 def get_available_distributions():
     print("Starting get_available_distributions()")
@@ -69,9 +88,6 @@ def get_available_distributions():
             # Extract everything before the first space (the NAME column)
             distro_name = line.split(maxsplit=1)[0].strip()
             distributions.append({'id': distro_name, 'name': distro_name})
-
-    print("Final list of distributions:")
-    print(distributions)
 
     return distributions
 

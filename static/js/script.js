@@ -1,8 +1,8 @@
 $(document).ready(function() {
     // Enable/Disable action buttons based on selection
-    $('.instance-checkbox').on('change', function() {
-        var selectedInstances = $('.instance-checkbox:checked');
-        if (selectedInstances.length > 0) {
+    $('.instance-radio').on('change', function() {
+        var selectedInstance = $('.instance-radio:checked');
+        if (selectedInstance.length > 0) {
             $('#deleteBtn').prop('disabled', false);
             $('#cloneBtn').prop('disabled', false);
         } else {
@@ -15,39 +15,65 @@ $(document).ready(function() {
         $('#installBtn').prop('disabled', false);
     });
 
-    // Handle Delete Action
-    $('#deleteBtn').click(function() {
+    // Handle Clone Action
+    $('#cloneBtn').click(function() {
+        var selectedInstance = $('.instance-radio:checked').data('instance');
+        $('#newInstanceName').val(selectedInstance); // Pre-populate the name
+        $('#nameError').hide(); // Reset error message visibility
         $('#confirmationModal').modal('show');
+
         $('#confirmActionBtn').off('click').on('click', function() {
-            var selectedInstances = $('.instance-checkbox:checked').map(function() {
-                return $(this).data('instance');
-            }).get();
-            $.ajax({
-                url: '/delete',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ instances: selectedInstances }),
-                success: function(response) {
-                    location.reload();
+            var newInstanceName = $('#newInstanceName').val().trim();
+
+            if (newInstanceName === '') {
+                $('#nameError').text('Instance name cannot be empty.').show();
+                return;
+            }
+
+            // Check if the instance name already exists
+            $.get('/check-instance-name', { instance_name: newInstanceName }, function(response) {
+                if (response.exists) {
+                    $('#nameError').text('An instance with this name already exists. Please choose a different name.').show();
+                } else {
+                    // Proceed with cloning
+                    $.ajax({
+                        url: '/clone',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ 
+                            original_instance: selectedInstance, 
+                            new_instance_name: newInstanceName 
+                        }),
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                $('#confirmationModal').modal('hide'); // Close the modal
+                                location.reload(); // Reload the page to refresh the list
+                            } else {
+                                $('#nameError').text('Cloning failed: ' + response.message).show();
+                            }
+                        },
+                        error: function(xhr) {
+                            $('#nameError').text('An error occurred: ' + xhr.responseText).show();
+                        }
+                    });
                 }
             });
         });
     });
 
-    // Handle Clone Action
-    $('#cloneBtn').click(function() {
+    // Handle Delete Action
+    $('#deleteBtn').click(function() {
         $('#confirmationModal').modal('show');
         $('#confirmActionBtn').off('click').on('click', function() {
-            var selectedInstances = $('.instance-checkbox:checked').map(function() {
-                return $(this).data('instance');
-            }).get();
+            var selectedInstance = $('.instance-radio:checked').data('instance');
             $.ajax({
-                url: '/clone',
+                url: '/delete',
                 method: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ instances: selectedInstances }),
+                data: JSON.stringify({ instances: [selectedInstance] }),
                 success: function(response) {
-                    location.reload();
+                    $('#confirmationModal').modal('hide'); // Close the modal
+                    location.reload(); // Reload the page to refresh the list
                 }
             });
         });
@@ -71,4 +97,11 @@ $(document).ready(function() {
     $('input[name="distribution"]').change(function() {
         $('#installBtn').prop('disabled', false);
     });
+
+    function refreshInstancesList() {
+        $.get("/fetch-wsl-instances", function(data) {
+            // Update the instances list in Section 1 with the new data
+            $("#instances-list").html(data);
+        });
+    }
 });
